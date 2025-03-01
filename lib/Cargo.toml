@@ -1,0 +1,23 @@
+[package]
+name = "wrum-lib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+directories = "5.0.1"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.133"
+graphql_client = { version = "0.14.0", features = ["reqwest-blocking"] }
+reqwest = { version = "0.11.27", features = ["json", "blocking"] }
+tempfile = "3.14.0"
+fs4 = "0.12.0"
+apple-xar = "0.20.0"
+flate2 = "1.0.35"
+cpio_reader = "0.1.1"
+zip = "2.2.2"
+dmg = "0.1.2"
+regex = "1.11.1"
+xz2 = "0.1.7"
+tar = "0.4.43"
+walkdir = "2.5.0"
+uuid = {version =  "1.12.0", features = ["v4"] }

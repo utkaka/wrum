@@ -1,0 +1,108 @@
+query ReleaseInfo($version:String, $limit:Int!, $platform:[UnityReleaseDownloadPlatform!], $architecture:[UnityReleaseDownloadArchitecture!]) {
+    getUnityReleases(version: $version , limit:$limit, platform:$platform, architecture:$architecture) {
+        edges {
+            node {
+                __typename
+                ...Release
+            }
+        }
+    }
+}
+
+fragment DownloadSize on ReleaseDigitalValue {
+    value
+    unit
+}
+
+fragment PathRename on UnityReleaseModuleExtractedPathRename {
+    from
+    to
+}
+
+fragment ModuleDownload on UnityReleaseModule {
+    url
+    integrity
+    type
+    id
+    name
+    slug
+    description
+    category
+    downloadSize {
+        __typename
+        ...DownloadSize
+    }
+    installedSize {
+        __typename
+        ...DownloadSize
+    }
+    required
+    hidden
+    extractedPathRename {
+        __typename
+        ...PathRename
+    }
+    preSelected
+    destination
+    eula {
+        url
+        integrity
+        type
+        label
+        message
+    }
+}
+
+fragment ReleaseDownload on UnityReleaseHubDownload {
+    url
+    integrity
+    type
+    platform
+    architecture
+    downloadSize {
+        __typename
+        ...DownloadSize
+    }
+    installedSize {
+        __typename
+        ...DownloadSize
+    }
+    modules {
+        __typename
+        ...ModuleDownload
+        subModules {
+            __typename
+            ...ModuleDownload
+            subModules {
+                __typename
+                ...ModuleDownload
+            }
+        }
+    }
+}
+
+fragment Release on UnityRelease {
+    version
+    productName
+    releaseDate
+    releaseNotes {
+        url
+        integrity
+        type
+    }
+    stream
+    downloads {
+        __typename
+        ...ReleaseDownload
+    }
+    skuFamily
+    recommended
+    unityHubDeepLink
+    shortRevision
+    thirdPartyNotices {
+        url
+        integrity
+        type
+        originalFileName
+    }
+}

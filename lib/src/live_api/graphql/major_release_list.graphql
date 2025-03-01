@@ -1,0 +1,22 @@
+query LatestMajorReleases($platform:[UnityReleaseDownloadPlatform!]) {
+    getUnityReleaseMajorVersions(platform:$platform, stream:LTS) {
+        __typename
+        ...Item
+    }
+}
+
+
+fragment Item on UnityReleaseMajorVersion {
+    version
+    latestUnityRelease {
+        version
+        downloads {
+            __typename
+            ...Download
+        }
+    }
+}
+
+fragment Download on UnityReleaseHubDownload {
+    architecture
+}
