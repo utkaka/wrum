@@ -2,6 +2,7 @@ use crate::editors::info::SystemArch;
 use crate::live_api::release_info::UnityReleaseDownloadPlatform;
 use directories::BaseDirs;
 use std::error::Error;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 #[cfg_attr(target_os = "macos", path = "os/macos.rs")]
@@ -26,13 +27,20 @@ pub fn get_preferable_editor_arch() -> SystemArch {
 
 pub fn get_config_path() -> PathBuf {
     let base_dirs = BaseDirs::new().unwrap();
-    PathBuf::from(base_dirs.config_dir()).join(os::get_config_folder_name())
+    let path = PathBuf::from(base_dirs.config_dir()).join(os::get_config_folder_name());
+    if let Err(err) = fs::create_dir_all(&path) {
+        eprintln!("Warning: failed to create Unity Hub config directory {}: {}", path.display(), err);
+    }
+    path
 }
 pub fn get_default_install_path() -> PathBuf {
     let mut path = os::get_applications_path();
     path.push("Unity");
     path.push("Hub");
     path.push("Editor");
+    if let Err(err) = fs::create_dir_all(&path) {
+        eprintln!("Warning: failed to create default Unity install directory {}: {}", path.display(), err);
+    }
     path
 }
 

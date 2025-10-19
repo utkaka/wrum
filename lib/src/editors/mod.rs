@@ -153,8 +153,10 @@ fn append_secondary_path_editors(editors: &mut Vec<EditorInfo>) -> Result<(), Bo
 }
 
 fn list_editors_in_folder(path: PathBuf, editors: &mut Vec<EditorInfo>) -> Result<(), Box<dyn Error>> {
-    let root = fs::read_dir(path);
-    for child in root? {
+    if !path.exists() {
+        return Ok(());
+    }
+    for child in fs::read_dir(path)? {
         let entry = child?.path();
         if !entry.is_dir() {
             continue;

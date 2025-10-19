@@ -62,7 +62,7 @@ pub fn set_secondary_install_path(path: impl AsRef<Path>, check_path: bool) -> R
     if check_path && !path.exists() {
         return Err("Error: This directory does not exist.".into());
     }
-    let config_file_path = PathBuf::from_iter([system_info::get_config_path().to_str().unwrap(), CONFIG_FILE_NAME]);
+    let config_file_path = system_info::get_config_path().join(CONFIG_FILE_NAME);
     let json = serde_json::to_string(&path)?;
     match fs::write(config_file_path, json) {
         Ok(_) => Ok(()),
@@ -71,7 +71,12 @@ pub fn set_secondary_install_path(path: impl AsRef<Path>, check_path: bool) -> R
 }
 
 pub fn get_secondary_install_path() -> Result<Option<PathBuf>, Box<dyn Error>> {
-    let config_file_path = PathBuf::from_iter([system_info::get_config_path().to_str().unwrap(), CONFIG_FILE_NAME]);
+    let config_file_path = system_info::get_config_path().join(CONFIG_FILE_NAME);
+    if !config_file_path.exists() {
+        let empty_value = serde_json::to_string("")?;
+        fs::write(&config_file_path, empty_value)?;
+        return Ok(None);
+    }
     let contents = fs::read_to_string(config_file_path)?;
     match serde_json::from_str(&contents)? {
         Value::String(string) => match string.is_empty() {
