@@ -1,7 +1,7 @@
 pub mod info;
 
 use crate::modules::info::ModuleInfo;
-use crate::{editors, install, system_info};
+use crate::{editors, install, live_api, system_info};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
@@ -83,27 +83,64 @@ fn push_module_to_install(module: String, modules_info: &HashMap<String, ModuleI
 }
 
 pub fn read_modules_info(path: impl AsRef<Path>) -> Result<HashMap<String, ModuleInfo>, Box<dyn Error>> {
-    let mut modules = HashMap::new();
     let editor_executable_path = system_info::get_editor_executable_path(path.as_ref());
     if !editor_executable_path.exists() {
         return Err("No editor found".into());
     }
-    let modules_path = PathBuf::from(path.as_ref()).join("modules.json");
-    match modules_path.exists() {
-        true => {
-            let contents = fs::read_to_string(modules_path)?;
-            let info: Vec<ModuleInfo> = serde_json::from_str(&contents)?;
-            for s in info {
-                modules.insert(s.id.clone(), s);
-            }
-            Ok(modules)
+    let modules_vec = match load_modules_from_disk(path.as_ref()) {
+        Ok(modules) => modules,
+        Err(err) => {
+            eprintln!(
+                "modules.json is missing or invalid for {} ({}). Attempting to refresh metadata...",
+                path.as_ref().display(),
+                err
+            );
+            rebuild_modules_metadata(path.as_ref())?
         }
-        false => Err("modules.json not found".into()),
-    }
+    };
+    Ok(modules_vec.into_iter().fold(HashMap::new(), |mut acc, module| {
+        acc.insert(module.id.clone(), module);
+        acc
+    }))
 }
 
 pub fn write_modules_info(path: impl AsRef<Path>, modules: Vec<ModuleInfo>) -> Result<(), Box<dyn Error>> {
     let modules_path = PathBuf::from(path.as_ref()).join("modules.json");
     fs::write(modules_path, serde_json::to_string(&modules)?)?;
     Ok(())
+}
+
+fn load_modules_from_disk(path: &Path) -> Result<Vec<ModuleInfo>, Box<dyn Error>> {
+    let modules_path = PathBuf::from(path).join("modules.json");
+    let contents = fs::read_to_string(modules_path)?;
+    let info: Vec<ModuleInfo> = serde_json::from_str(&contents)?;
+    Ok(info)
+}
+
+fn rebuild_modules_metadata(path: &Path) -> Result<Vec<ModuleInfo>, Box<dyn Error>> {
+    let editor_info = editors::info::read_editor_info(PathBuf::from(path))?
+        .ok_or("Couldn't read editor metadata for installed editor")?;
+    let release = live_api::get_version_info(
+        &editor_info.version,
+        system_info::get_platform(),
+        vec![editor_info.arch.clone()],
+    )?
+    .ok_or("Couldn't retrieve release info for installed editor")?;
+    let download = release
+        .downloads
+        .into_iter()
+        .find_map(|release_download| {
+            #[allow(irrefutable_let_patterns)]
+            if let live_api::release_info::ReleaseDownloads::UnityReleaseHubDownload(download) = release_download {
+                let download_arch = editors::info::SystemArch::from(download.architecture.clone());
+                if download_arch == editor_info.arch {
+                    return Some(download);
+                }
+            }
+            None
+        })
+        .ok_or("Couldn't locate download for installed editor architecture")?;
+    let modules = crate::modules::info::convert_api_modules(&download)?;
+    write_modules_info(path, modules.clone())?;
+    Ok(modules)
 }
