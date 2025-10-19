@@ -1,6 +1,7 @@
 use crate::GlobalOpts;
 use clap::Args;
 use std::error::Error;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use crate::install::install_editor;
@@ -57,6 +58,19 @@ pub struct ProjectExecuteArgs {
     ///additional arguments for editor
     #[clap(allow_hyphen_values=true, last=true)]
     arguments: Vec<String>
+}
+
+#[derive(Debug, Args)]
+pub struct ProjectCreateArgs {
+    ///editor version to use for project creation
+    #[clap(long, short)]
+    version: String,
+    ///path where the project should be created
+    #[clap(long)]
+    path: PathBuf,
+    ///editor architecture (x86_64 or arm64)
+    #[clap(long)]
+    architecture: Option<String>,
 }
 
 pub fn editor_version(args: ProjectEditorVersionArgs, _global_opt: GlobalOpts) -> Result<i32, Box<dyn Error>> {
@@ -121,6 +135,26 @@ pub fn execute(args: ProjectExecuteArgs, _global_opt: GlobalOpts) -> Result<i32,
     } else {
         println!("License is still in use");
     }
+    Ok(0)
+}
+
+pub fn create(args: ProjectCreateArgs, _global_opt: GlobalOpts) -> Result<i32, Box<dyn Error>> {
+    install_editor(&args.version, None, args.architecture.clone(), false)?;
+    let editor_path = wrum_lib::editors::get_installed_editor_path(&args.version, args.architecture.clone())?;
+    let editor_path = match editor_path {
+        Some(path) => path,
+        None => return Err("Something went wrong. Failed to install and obtain an editor".into())
+    };
+    if let Some(parent) = args.path.parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+    let executable_path = wrum_lib::system_info::get_editor_executable_path(editor_path);
+    Command::new(executable_path)
+        .arg("-createProject")
+        .arg(&args.path)
+        .status()?;
     Ok(0)
 }
 

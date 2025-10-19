@@ -40,6 +40,9 @@ enum Command {
     OpenProject(project::ProjectOpenArgs),
     #[clap(alias("pe"))]
     ExecuteProject(project::ProjectExecuteArgs),
+    ///create a new project using a specific editor version
+    #[clap(alias("cp"))]
+    CreateProject(project::ProjectCreateArgs),
 }
 
 #[derive(Debug, Args)]
@@ -66,6 +69,7 @@ fn main() {
         Command::ProjectEditorVersion(args) => project::editor_version(args, global_opt),
         Command::OpenProject(args) => project::open(args, global_opt),
         Command::ExecuteProject(args) => project::execute(args, global_opt),
+        Command::CreateProject(args) => project::create(args, global_opt),
     };
     match exit_code {
         Ok(code) => {
